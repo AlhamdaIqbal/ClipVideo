@@ -4,6 +4,36 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from app.config import settings
+
+
+def _vertical_video_filter() -> str:
+    width = settings.export_width
+    height = settings.export_height
+    return (
+        f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+        f"crop={width}:{height},setsar=1"
+    )
+
+
+def _encode_args() -> list[str]:
+    return [
+        "-c:v",
+        "libx264",
+        "-preset",
+        settings.export_video_preset,
+        "-crf",
+        str(settings.export_video_crf),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        settings.export_audio_bitrate,
+        "-movflags",
+        "+faststart",
+    ]
+
 
 def _write_concat_file(clips: list[Path], list_path: Path) -> None:
     list_path.parent.mkdir(parents=True, exist_ok=True)
@@ -25,8 +55,8 @@ def export_clip(
     if duration <= 0:
         raise ValueError("Durasi clip tidak valid.")
 
-    # Try stream copy first (fast)
-    cmd_copy = [
+    # Always re-encode so every clip is a browser/Telegram-friendly 9:16 MP4.
+    cmd = [
         "ffmpeg",
         "-y",
         "-ss",
@@ -35,42 +65,12 @@ def export_clip(
         str(source_video),
         "-t",
         str(duration),
-        "-c",
-        "copy",
-        "-avoid_negative_ts",
-        "make_zero",
+        "-vf",
+        _vertical_video_filter(),
+        *_encode_args(),
         str(output_path),
     ]
-
-    result = subprocess.run(cmd_copy, capture_output=True, text=True)
-    if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 0:
-        return output_path
-
-    # Fallback: re-encode for browser compatibility
-    cmd_encode = [
-        "ffmpeg",
-        "-y",
-        "-ss",
-        str(start_sec),
-        "-i",
-        str(source_video),
-        "-t",
-        str(duration),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-crf",
-        "23",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-movflags",
-        "+faststart",
-        str(output_path),
-    ]
-    result = subprocess.run(cmd_encode, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg gagal: {result.stderr[-500:]}")
 
@@ -100,6 +100,8 @@ def concat_clips(clips: list[Path], output_path: Path) -> Path:
         str(list_file),
         "-c",
         "copy",
+        "-movflags",
+        "+faststart",
         str(output_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -115,18 +117,9 @@ def concat_clips(clips: list[Path], output_path: Path) -> Path:
         "0",
         "-i",
         str(list_file),
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-crf",
-        "23",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-movflags",
-        "+faststart",
+        "-vf",
+        _vertical_video_filter(),
+        *_encode_args(),
         str(output_path),
     ]
     result = subprocess.run(cmd_encode, capture_output=True, text=True)

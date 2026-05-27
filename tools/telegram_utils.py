@@ -21,3 +21,15 @@ def send_document(bot_token: str, chat_id: str | int, file_path: Path, caption: 
         resp = requests.post(url, data=data, files=files)
     resp.raise_for_status()
     return resp.json()
+
+
+def send_video(bot_token: str, chat_id: str | int, file_path: Path, caption: str | None = None) -> dict:
+    url = f"https://api.telegram.org/bot{bot_token}/sendVideo"
+    with open(file_path, "rb") as f:
+        files = {"video": f}
+        data = {"chat_id": chat_id, "supports_streaming": "true"}
+        if caption:
+            data["caption"] = caption[:1024]
+        resp = requests.post(url, data=data, files=files)
+    resp.raise_for_status()
+    return resp.json()

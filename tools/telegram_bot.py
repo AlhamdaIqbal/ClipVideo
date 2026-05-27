@@ -1,8 +1,11 @@
 import os
 import re
 import requests
+from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+
+load_dotenv()
 
 # Configuration
 VERCEL_WEBHOOK_URL = os.environ.get("VERCEL_WEBHOOK_URL")

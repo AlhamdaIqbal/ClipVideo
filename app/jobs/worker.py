@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.config import settings
 from app.jobs.manager import job_manager
 from app.models.schemas import ClipScores, ClipSegment, JobResult, JobStatus, TranscriptSegment
 from app.pipeline.analyze import CandidateClip, find_best_clips, format_timestamp
 from app.pipeline.download import download_youtube
 from app.pipeline.export import concat_clips, export_clip
 from app.pipeline.transcribe import get_audio_path, transcribe_audio
+from tools.telegram_utils import send_message, send_video
 
 
 def run_analysis_job(job_id: str, url: str) -> None:
@@ -87,6 +89,7 @@ def run_analysis_job(job_id: str, url: str) -> None:
             try:
                 concat_clips(exported_clips, final_short_path)
                 final_short_url = f"/clips/{job_id}/short.mp4"
+                _send_telegram_result(final_short_path, download.title)
             except Exception as exc:
                 # Jangan hentikan proses jika penggabungan final gagal.
                 job_manager.update(
@@ -123,6 +126,30 @@ def run_analysis_job(job_id: str, url: str) -> None:
             message="Terjadi kesalahan.",
             error=str(exc),
         )
+
+
+def _send_telegram_result(video_path: Path, title: str) -> None:
+    if not settings.telegram_send_results:
+        return
+    if not settings.telegram_bot_token or not settings.telegram_chat_id:
+        return
+
+    try:
+        send_video(
+            settings.telegram_bot_token,
+            settings.telegram_chat_id,
+            video_path,
+            caption=f"Short dari {title}",
+        )
+    except Exception as exc:
+        try:
+            send_message(
+                settings.telegram_bot_token,
+                settings.telegram_chat_id,
+                f"Short selesai dibuat, tetapi gagal diunggah ke Telegram: {exc}",
+            )
+        except Exception:
+            pass
 
 
 def _to_clip_segment(job_id: str, rank: int, cand: CandidateClip) -> ClipSegment:

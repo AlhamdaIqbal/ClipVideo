@@ -45,6 +45,12 @@ Tempel link YouTube → klik **Analisis** → tunggu progress selesai → previe
 | `CLIP_COUNT_TARGET` | `5` | Jumlah clip target |
 | `CLIP_MIN_SECONDS` | `45` | Durasi minimum clip |
 | `CLIP_MAX_SECONDS` | `120` | Durasi maksimum clip |
+| `EXPORT_WIDTH` | `1080` | Lebar output video vertikal |
+| `EXPORT_HEIGHT` | `1920` | Tinggi output video vertikal |
+| `EXPORT_VIDEO_CRF` | `23` | Kualitas encode ffmpeg; lebih kecil = lebih bagus/file lebih besar |
+| `TELEGRAM_BOT_TOKEN` | - | Token bot dari BotFather |
+| `TELEGRAM_CHAT_ID` | - | Chat ID tujuan jika ingin hasil web lokal otomatis dikirim |
+| `TELEGRAM_SEND_RESULTS` | `false` | Set `true` agar short final dari web lokal dikirim ke Telegram |
 
 ## Contoh output API
 
@@ -113,7 +119,7 @@ Endpoint publik akan tersedia pada path `/enqueue`.
 
 Di GitHub repo, tambahkan secret `TELEGRAM_BOT_TOKEN`.
 
-Workflow `.github/workflows/clip.yml` akan men-trigger job saat webhook menerima request. Actions menjalankan pipeline di runner Ubuntu, membuat `short.mp4`, dan mengunggah hasil ke Telegram.
+Workflow `.github/workflows/clip.yml` akan men-trigger job saat webhook menerima request. Actions menjalankan pipeline di runner Ubuntu, membuat `short.mp4` format vertikal 9:16, dan mengunggah hasil ke Telegram sebagai video.
 
 Batasan dan catatan:
 - GitHub Actions free tier memiliki kuota dan timeout; cocok untuk penggunaan ringan.

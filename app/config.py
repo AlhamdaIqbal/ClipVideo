@@ -25,6 +25,16 @@ class Settings(BaseSettings):
     min_conclusion_score: float = 0.4
     embedding_similarity_threshold: float = 0.85
 
+    export_width: int = 1080
+    export_height: int = 1920
+    export_video_crf: int = 23
+    export_video_preset: str = "fast"
+    export_audio_bitrate: str = "128k"
+
+    telegram_bot_token: str | None = None
+    telegram_chat_id: str | None = None
+    telegram_send_results: bool = False
+
     job_ttl_hours: int = 24
     host: str = "127.0.0.1"
     port: int = 8000

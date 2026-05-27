@@ -6,11 +6,15 @@ import sys
 import traceback
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from app.pipeline.download import download_youtube
 from app.pipeline.transcribe import get_audio_path, transcribe_audio
 from app.pipeline.analyze import find_best_clips, format_timestamp
 from app.pipeline.export import export_clip, concat_clips
-from tools.telegram_utils import send_message, send_document
+from tools.telegram_utils import send_message, send_document, send_video
+
+load_dotenv()
 
 
 def run_job(payload: dict) -> int:
@@ -58,11 +62,14 @@ def run_job(payload: dict) -> int:
         try:
             concat_clips(exported, final_short)
             send_message(bot_token, chat_id, "Short final dibuat, mengunggah ke Telegram...")
-            send_document(bot_token, chat_id, final_short, caption=f"Short dari {download.title}")
+            send_video(bot_token, chat_id, final_short, caption=f"Short dari {download.title}")
         except Exception:
             send_message(bot_token, chat_id, "Gagal membuat short final, mengunggah clip individu...")
             for f in exported:
-                send_document(bot_token, chat_id, f, caption=f.name)
+                try:
+                    send_video(bot_token, chat_id, f, caption=f.name)
+                except Exception:
+                    send_document(bot_token, chat_id, f, caption=f.name)
 
         send_message(bot_token, chat_id, "Selesai.")
         return 0

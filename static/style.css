@@ -209,8 +209,10 @@ button:disabled {
 
 video {
   width: 100%;
+  aspect-ratio: 9 / 16;
   border-radius: 8px;
   background: #000;
+  object-fit: contain;
 }
 
 .download-btn {
