@@ -9,3 +9,4 @@ faster-whisper>=1.1.0
 sentence-transformers>=3.3.0
 scikit-learn>=1.5.0
 numpy>=1.26.0
+python-telegram-bot>=21.0

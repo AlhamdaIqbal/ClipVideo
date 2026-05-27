@@ -132,3 +132,37 @@ curl -X POST https://your-project.vercel.app/enqueue \
 
 Setelah webhook menerima request, GitHub Actions akan dijalankan dan bot akan mengirimkan progress & hasil ke `chat_id`.
 
+## Menjalankan Bot Telegram
+
+Untuk menghubungkan bot Telegram dengan webhook Vercel:
+
+### 1. Setup Environment Variables
+
+Buat file `.env` atau set environment variables:
+
+```bash
+TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
+VERCEL_WEBHOOK_URL=https://your-project.vercel.app/enqueue
+ENQUEUE_SECRET=your_secret_if_set
+```
+
+### 2. Jalankan Bot
+
+```bash
+.venv\Scripts\activate
+python tools/telegram_bot.py
+```
+
+### 3. Cara Kerja
+
+1. User kirim link YouTube ke bot Telegram
+2. Bot mengekstrak URL dan memanggil Vercel webhook
+3. Vercel webhook trigger GitHub Actions
+4. GitHub Actions memproses video dan mengirim hasil ke Telegram
+
+### 4. Commands Bot
+
+- `/start` - Mulai bot dan lihat instruksi
+- `/help` - Bantuan penggunaan
+- Kirim link YouTube langsung untuk memproses
+
