@@ -10,7 +10,7 @@ from app.pipeline.download import download_youtube
 from app.pipeline.transcribe import get_audio_path, transcribe_audio
 from app.pipeline.analyze import find_best_clips, format_timestamp
 from app.pipeline.export import export_clip, concat_clips
-from tools.telegram import send_message, send_document
+from tools.telegram_utils import send_message, send_document
 
 
 def run_job(payload: dict) -> int:
