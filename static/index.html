@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClipVideo — Analisis Clip YouTube Gratis</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>ClipVideo</h1>
+      <p class="subtitle">Temukan 3–5 clip terbaik dari video YouTube — hook memikat, kesimpulan jelas, tanpa AI berbayar.</p>
+    </header>
+
+    <section class="card form-card">
+      <form id="analyze-form">
+        <label for="url">Link YouTube</label>
+        <div class="input-row">
+          <input
+            type="url"
+            id="url"
+            name="url"
+            placeholder="https://www.youtube.com/watch?v=..."
+            required
+          />
+          <button type="submit" id="submit-btn">Analisis</button>
+        </div>
+      </form>
+      <p class="hint">Video panjang membutuhkan waktu (unduh + transkripsi lokal). Jangan tutup halaman saat proses berjalan.</p>
+    </section>
+
+    <section id="progress-section" class="card hidden">
+      <h2>Memproses...</h2>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+      <p id="progress-message" class="progress-message"></p>
+      <p id="progress-status" class="progress-status"></p>
+    </section>
+
+    <section id="error-section" class="card error-card hidden">
+      <h2>Gagal</h2>
+      <p id="error-message"></p>
+    </section>
+
+    <section id="results-section" class="hidden">
+      <div class="results-header card">
+        <h2 id="video-title"></h2>
+        <p id="video-meta" class="video-meta"></p>
+      </div>
+      <div id="clips-container"></div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
