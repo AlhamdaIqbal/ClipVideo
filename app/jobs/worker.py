@@ -68,7 +68,8 @@ def run_analysis_job(job_id: str, url: str) -> None:
         exported_clips: list[Path] = []
         for rank, cand in enumerate(clips, start=1):
             out_path = clips_dir / f"clip_{rank}.mp4"
-            export_clip(download.video_path, out_path, cand.start_sec, cand.end_sec)
+            # Pass segments to export_clip for auto-subtitle generation
+            export_clip(download.video_path, out_path, cand.start_sec, cand.end_sec, segments=segments)
             exported_clips.append(out_path)
             progress = 75 + int(20 * rank / len(clips))
             job_manager.update(

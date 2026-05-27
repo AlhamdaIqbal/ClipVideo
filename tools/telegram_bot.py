@@ -118,7 +118,7 @@ async def process_video_direct(url: str, status_message: Update.message) -> None
                 f"🎥 Judul: *{download.title}*",
                 parse_mode="Markdown"
             )
-            await asyncio.to_thread(export_clip, download.video_path, out_path, cand.start_sec, cand.end_sec)
+            await asyncio.to_thread(export_clip, download.video_path, out_path, cand.start_sec, cand.end_sec, segments=segments)
             exported_clips.append(out_path)
             
         # Step 5: Merging and Sending

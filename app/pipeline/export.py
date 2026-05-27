@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import shutil
+import logging
 import subprocess
 from pathlib import Path
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _vertical_video_filter() -> str:
@@ -49,30 +52,90 @@ def export_clip(
     output_path: Path,
     start_sec: float,
     end_sec: float,
+    segments: list | None = None,
+    smart_reframe: bool = True,
 ) -> Path:
+    from tools.video_effects import generate_srt, track_face_and_reframe
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     duration = end_sec - start_sec
     if duration <= 0:
         raise ValueError("Durasi clip tidak valid.")
 
-    # Always re-encode so every clip is a browser/Telegram-friendly 9:16 MP4.
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-ss",
-        str(start_sec),
-        "-i",
-        str(source_video),
-        "-t",
-        str(duration),
-        "-vf",
-        _vertical_video_filter(),
-        *_encode_args(),
-        str(output_path),
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg gagal: {result.stderr[-500:]}")
+    temp_video = output_path.parent / f"temp_tracked_{output_path.name}"
+    reframe_success = False
+
+    # 1. Try Smart Face Tracking
+    if smart_reframe:
+        try:
+            reframe_success = track_face_and_reframe(source_video, temp_video, start_sec, end_sec)
+        except Exception as err:
+            logger.error(f"Gagal melakukan Smart Face Tracking: {err}. Menggunakan fallback Center Crop.")
+            reframe_success = False
+
+    # Fallback to standard vertical Center Crop if tracking fails or was not requested
+    if not reframe_success:
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-ss", str(start_sec),
+            "-i", str(source_video),
+            "-t", str(duration),
+            "-vf", _vertical_video_filter(),
+            *_encode_args(),
+            str(temp_video),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            if temp_video.exists():
+                temp_video.unlink()
+            raise RuntimeError(f"ffmpeg fallback gagal: {result.stderr[-500:]}")
+
+    # 2. Burn Subtitles if transcript segments are provided
+    if segments:
+        temp_srt = output_path.parent / f"sub_{output_path.name}.srt"
+        generate_srt(segments, temp_srt, start_sec, end_sec)
+        
+        # Copy to local working directory to solve Windows absolute path escaping bugs in FFmpeg
+        local_srt = Path.cwd() / f"local_sub_{output_path.name}.srt"
+        shutil.copy2(temp_srt, local_srt)
+        
+        try:
+            # Burn subtitle using FFmpeg
+            # Alignment=2 is bottom-center, MarginV=120 raises it up, FontName=Arial Black or Arial is standard, yellow colour
+            # Outline=3, Shadow=0 for super contrast
+            style = (
+                "Alignment=2,FontName=Impact,FontSize=20,"
+                "PrimaryColour=&H00FFFF,Outline=3,Shadow=0,"
+                "MarginV=120"
+            )
+            
+            cmd_sub = [
+                "ffmpeg",
+                "-y",
+                "-i", str(temp_video),
+                "-vf", f"subtitles={local_srt.name}:force_style='{style}'",
+                *_encode_args(),
+                str(output_path)
+            ]
+            
+            sub_result = subprocess.run(cmd_sub, capture_output=True, text=True)
+            if sub_result.returncode != 0:
+                raise RuntimeError(f"Gagal membakar subtitle: {sub_result.stderr[-500:]}")
+                
+        finally:
+            # Absolute clean up of subtitle temp files
+            if temp_srt.exists():
+                temp_srt.unlink()
+            if local_srt.exists():
+                local_srt.unlink()
+            if temp_video.exists():
+                temp_video.unlink()
+    else:
+        # If no subtitles requested, rename/move the vertical clip directly to the output_path
+        if output_path.exists():
+            output_path.unlink()
+        shutil.move(str(temp_video), str(output_path))
 
     return output_path
 
