@@ -17,9 +17,12 @@ class Settings(BaseSettings):
 
     clip_count_target: int = 3
     clip_min_count: int = 3
-    clip_min_seconds: float = 45.0
-    clip_max_seconds: float = 120.0
-    clip_window_step: float = 30.0
+    clip_min_seconds: float = 20.0
+    clip_max_seconds: float = 90.0
+    clip_window_step: float = 15.0
+    clip_duration_step: float = 15.0
+    clip_ideal_min_seconds: float = 25.0
+    clip_ideal_max_seconds: float = 60.0
 
     min_hook_score: float = 0.4
     min_conclusion_score: float = 0.4
@@ -30,10 +33,15 @@ class Settings(BaseSettings):
     export_video_crf: int = 23
     export_video_preset: str = "fast"
     export_audio_bitrate: str = "128k"
+    export_subtitles: bool = True
+    export_smart_reframe: bool = True
 
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
     telegram_send_results: bool = False
+    telegram_max_upload_mb: int = 48
+    telegram_compress_width: int = 720
+    telegram_compress_height: int = 1280
 
     job_ttl_hours: int = 24
     host: str = "127.0.0.1"

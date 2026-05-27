@@ -53,7 +53,7 @@ def export_clip(
     start_sec: float,
     end_sec: float,
     segments: list | None = None,
-    smart_reframe: bool = True,
+    smart_reframe: bool | None = None,
 ) -> Path:
     from tools.video_effects import generate_srt, track_face_and_reframe
 
@@ -62,16 +62,34 @@ def export_clip(
     if duration <= 0:
         raise ValueError("Durasi clip tidak valid.")
 
+    smart_reframe = settings.export_smart_reframe if smart_reframe is None else smart_reframe
     temp_video = output_path.parent / f"temp_tracked_{output_path.name}"
     reframe_success = False
+    temp_srt = output_path.parent / f"sub_{output_path.name}.srt"
+    should_burn_subtitles = bool(segments and settings.export_subtitles)
+
+    if should_burn_subtitles:
+        if not generate_srt(segments, temp_srt, start_sec, end_sec):
+            should_burn_subtitles = False
 
     # 1. Try Smart Face Tracking
     if smart_reframe:
         try:
-            reframe_success = track_face_and_reframe(source_video, temp_video, start_sec, end_sec)
+            reframe_success = track_face_and_reframe(
+                source_video,
+                output_path if should_burn_subtitles else temp_video,
+                start_sec,
+                end_sec,
+                srt_path=temp_srt if should_burn_subtitles else None,
+            )
         except Exception as err:
             logger.error(f"Gagal melakukan Smart Face Tracking: {err}. Menggunakan fallback Center Crop.")
             reframe_success = False
+
+    if reframe_success and should_burn_subtitles:
+        if temp_srt.exists():
+            temp_srt.unlink()
+        return output_path
 
     # Fallback to standard vertical Center Crop if tracking fails or was not requested
     if not reframe_success:
@@ -92,10 +110,7 @@ def export_clip(
             raise RuntimeError(f"ffmpeg fallback gagal: {result.stderr[-500:]}")
 
     # 2. Burn Subtitles if transcript segments are provided
-    if segments:
-        temp_srt = output_path.parent / f"sub_{output_path.name}.srt"
-        generate_srt(segments, temp_srt, start_sec, end_sec)
-        
+    if should_burn_subtitles:
         # Copy to local working directory to solve Windows absolute path escaping bugs in FFmpeg
         local_srt = Path.cwd() / f"local_sub_{output_path.name}.srt"
         shutil.copy2(temp_srt, local_srt)

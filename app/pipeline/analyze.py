@@ -83,6 +83,7 @@ def _build_candidates(segments: list[TranscriptSegment]) -> list[CandidateClip]:
     min_len = settings.clip_min_seconds
     max_len = settings.clip_max_seconds
     step = settings.clip_window_step
+    duration_step = max(5.0, settings.clip_duration_step)
     candidates: list[CandidateClip] = []
 
     if not segments:
@@ -90,64 +91,80 @@ def _build_candidates(segments: list[TranscriptSegment]) -> list[CandidateClip]:
 
     video_end = segments[-1].end
     t = segments[0].start
+    window_lengths = _candidate_window_lengths(min_len, max_len, duration_step)
+    seen_ranges: set[tuple[int, int]] = set()
 
     while t < video_end:
-        window_end = t + max_len
-        indices = [
-            i
-            for i, seg in enumerate(segments)
-            if seg.end > t and seg.start < window_end
-        ]
-        if not indices:
-            t += step
-            continue
+        for window_len in window_lengths:
+            window_end = t + window_len
+            indices = [
+                i
+                for i, seg in enumerate(segments)
+                if seg.end > t and seg.start < window_end
+            ]
+            if not indices:
+                continue
 
-        start_sec = segments[indices[0]].start
-        end_sec = segments[indices[-1]].end
-        duration = end_sec - start_sec
+            start_sec = segments[indices[0]].start
+            end_sec = segments[indices[-1]].end
+            duration = end_sec - start_sec
 
-        if duration < min_len * 0.8:
-            t += step
-            continue
+            if duration < min_len * 0.8:
+                continue
 
-        if duration > max_len:
-            end_sec = start_sec + max_len
-            indices = [i for i in indices if segments[i].start < end_sec]
-            if indices:
-                end_sec = segments[indices[-1]].end
+            if duration > max_len:
+                end_sec = start_sec + max_len
+                indices = [i for i in indices if segments[i].start < end_sec]
+                if indices:
+                    end_sec = segments[indices[-1]].end
 
-        start_sec, end_sec, indices = _snap_to_natural_boundaries(
-            segments, indices, start_sec, end_sec, min_len, max_len
-        )
-        duration = end_sec - start_sec
-        if duration < min_len * 0.7 or duration > max_len * 1.15:
-            t += step
-            continue
-
-        texts = [segments[i].text for i in indices]
-        full_text = " ".join(texts)
-        hook_text = " ".join(texts[: min(3, len(texts))])
-        conclusion_text = " ".join(texts[-min(3, len(texts)) :])
-        topic = _derive_topic(texts)
-
-        candidates.append(
-            CandidateClip(
-                start_sec=start_sec,
-                end_sec=end_sec,
-                text=full_text,
-                hook_text=hook_text,
-                conclusion_text=conclusion_text,
-                topic=topic,
-                hook_score=0.0,
-                conclusion_score=0.0,
-                interest_score=0.0,
-                total_score=0.0,
-                segment_indices=indices,
+            start_sec, end_sec, indices = _snap_to_natural_boundaries(
+                segments, indices, start_sec, end_sec, min_len, max_len
             )
-        )
+            duration = end_sec - start_sec
+            if duration < min_len * 0.7 or duration > max_len * 1.15:
+                continue
+
+            range_key = (round(start_sec), round(end_sec))
+            if range_key in seen_ranges:
+                continue
+            seen_ranges.add(range_key)
+
+            texts = [segments[i].text for i in indices]
+            full_text = " ".join(texts)
+            hook_text = " ".join(texts[: min(3, len(texts))])
+            conclusion_text = " ".join(texts[-min(3, len(texts)) :])
+            topic = _derive_topic(texts)
+
+            candidates.append(
+                CandidateClip(
+                    start_sec=start_sec,
+                    end_sec=end_sec,
+                    text=full_text,
+                    hook_text=hook_text,
+                    conclusion_text=conclusion_text,
+                    topic=topic,
+                    hook_score=0.0,
+                    conclusion_score=0.0,
+                    interest_score=0.0,
+                    total_score=0.0,
+                    segment_indices=indices,
+                )
+            )
         t += step
 
     return candidates
+
+
+def _candidate_window_lengths(min_len: float, max_len: float, duration_step: float) -> list[float]:
+    lengths: list[float] = []
+    length = min_len
+    while length <= max_len:
+        lengths.append(length)
+        length += duration_step
+    if not lengths or lengths[-1] < max_len:
+        lengths.append(max_len)
+    return lengths
 
 
 def _snap_to_natural_boundaries(
@@ -240,12 +257,13 @@ def _score_conclusion(text: str) -> float:
 
 def _score_interest(candidate: CandidateClip, all_texts: list[str], durations: list[float]) -> float:
     duration = candidate.end_sec - candidate.start_sec
-    ideal_min, ideal_max = 45.0, 90.0
+    ideal_min = settings.clip_ideal_min_seconds
+    ideal_max = settings.clip_ideal_max_seconds
     length_score = 1.0
     if duration < ideal_min:
         length_score = duration / ideal_min
     elif duration > ideal_max:
-        length_score = max(0.5, ideal_max / duration)
+        length_score = max(0.25, ideal_max / duration)
 
     try:
         vectorizer = TfidfVectorizer(max_features=500, stop_words="english")

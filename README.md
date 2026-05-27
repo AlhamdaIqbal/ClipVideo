@@ -43,14 +43,23 @@ Tempel link YouTube → klik **Analisis** → tunggu progress selesai → previe
 | `WHISPER_MODEL` | `small` | `base` lebih cepat di CPU lemah; `medium` jika ada GPU |
 | `WHISPER_DEVICE` | `cpu` | `cuda` jika NVIDIA + CUDA terpasang |
 | `CLIP_COUNT_TARGET` | `5` | Jumlah clip target |
-| `CLIP_MIN_SECONDS` | `45` | Durasi minimum clip |
-| `CLIP_MAX_SECONDS` | `120` | Durasi maksimum clip |
+| `CLIP_MIN_SECONDS` | `20` | Durasi minimum clip; dibuat pendek agar short tidak dipaksa 2 menit |
+| `CLIP_MAX_SECONDS` | `90` | Durasi maksimum clip |
+| `CLIP_WINDOW_STEP` | `15` | Jarak geser pencarian kandidat clip |
+| `CLIP_DURATION_STEP` | `15` | Variasi panjang kandidat clip |
+| `CLIP_IDEAL_MIN_SECONDS` | `25` | Durasi ideal bawah untuk scoring |
+| `CLIP_IDEAL_MAX_SECONDS` | `60` | Durasi ideal atas untuk scoring; lebih panjang tetap boleh jika kualitasnya kuat |
 | `EXPORT_WIDTH` | `1080` | Lebar output video vertikal |
 | `EXPORT_HEIGHT` | `1920` | Tinggi output video vertikal |
 | `EXPORT_VIDEO_CRF` | `23` | Kualitas encode ffmpeg; lebih kecil = lebih bagus/file lebih besar |
+| `EXPORT_SUBTITLES` | `true` | Bakar subtitle otomatis dari hasil transkripsi |
+| `EXPORT_SMART_REFRAME` | `true` | Crop 9:16 mengikuti wajah; fallback ke center crop jika wajah tidak terdeteksi |
 | `TELEGRAM_BOT_TOKEN` | - | Token bot dari BotFather |
 | `TELEGRAM_CHAT_ID` | - | Chat ID tujuan jika ingin hasil web lokal otomatis dikirim |
 | `TELEGRAM_SEND_RESULTS` | `false` | Set `true` agar short final dari web lokal dikirim ke Telegram |
+| `TELEGRAM_MAX_UPLOAD_MB` | `48` | Batas aman upload bot Telegram; video otomatis dikompres di atas ukuran ini |
+| `TELEGRAM_COMPRESS_WIDTH` | `720` | Lebar video hasil kompres khusus Telegram |
+| `TELEGRAM_COMPRESS_HEIGHT` | `1280` | Tinggi video hasil kompres khusus Telegram |
 
 ## Contoh output API
 
@@ -119,7 +128,7 @@ Endpoint publik akan tersedia pada path `/enqueue`.
 
 Di GitHub repo, tambahkan secret `TELEGRAM_BOT_TOKEN`.
 
-Workflow `.github/workflows/clip.yml` akan men-trigger job saat webhook menerima request. Actions menjalankan pipeline di runner Ubuntu, membuat `short.mp4` format vertikal 9:16, dan mengunggah hasil ke Telegram sebagai video.
+Workflow `.github/workflows/clip.yml` akan men-trigger job saat webhook menerima request. Actions menjalankan pipeline di runner Ubuntu, membuat `short.mp4` format vertikal 9:16 dengan subtitle, dan mengunggah hasil ke Telegram sebagai video. Jika file terlalu besar, video akan dikompres otomatis sebelum upload; jika short final tetap gagal diunggah, bot mengirim clip individual.
 
 Batasan dan catatan:
 - GitHub Actions free tier memiliki kuota dan timeout; cocok untuk penggunaan ringan.

@@ -54,22 +54,30 @@ def run_job(payload: dict) -> int:
         exported = []
         for i, c in enumerate(clips, start=1):
             out = clips_dir / f"clip_{i}.mp4"
-            export_clip(download.video_path, out, c.start_sec, c.end_sec)
+            export_clip(download.video_path, out, c.start_sec, c.end_sec, segments=segments)
             exported.append(out)
             send_message(bot_token, chat_id, f"Clip {i}/{len(clips)} diekspor: {out.name}")
 
         final_short = clips_dir / "short.mp4"
         try:
             concat_clips(exported, final_short)
-            send_message(bot_token, chat_id, "Short final dibuat, mengunggah ke Telegram...")
-            send_video(bot_token, chat_id, final_short, caption=f"Short dari {download.title}")
         except Exception:
+            final_short = None
+
+        if final_short and final_short.exists():
+            send_message(bot_token, chat_id, "Short final dibuat, mengunggah ke Telegram...")
+            try:
+                send_video(bot_token, chat_id, final_short, caption=f"Short dari {download.title}")
+            except Exception as exc:
+                send_message(
+                    bot_token,
+                    chat_id,
+                    f"Short final terlalu besar/gagal diunggah ({exc}). Mengirim clip individu...",
+                )
+                _send_individual_clips(bot_token, chat_id, exported)
+        else:
             send_message(bot_token, chat_id, "Gagal membuat short final, mengunggah clip individu...")
-            for f in exported:
-                try:
-                    send_video(bot_token, chat_id, f, caption=f.name)
-                except Exception:
-                    send_document(bot_token, chat_id, f, caption=f.name)
+            _send_individual_clips(bot_token, chat_id, exported)
 
         send_message(bot_token, chat_id, "Selesai.")
         return 0
@@ -80,6 +88,17 @@ def run_job(payload: dict) -> int:
             pass
         traceback.print_exc()
         return 3
+
+
+def _send_individual_clips(bot_token: str, chat_id: str | int, clips: list[Path]) -> None:
+    for f in clips:
+        try:
+            send_video(bot_token, chat_id, f, caption=f.name)
+        except Exception:
+            try:
+                send_document(bot_token, chat_id, f, caption=f.name)
+            except Exception as exc:
+                send_message(bot_token, chat_id, f"Gagal mengunggah {f.name}: {exc}")
 
 
 def main():

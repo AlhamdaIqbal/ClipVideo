@@ -35,7 +35,12 @@ def test_clips_have_valid_duration():
     for c in clips:
         assert c.end_sec > c.start_sec
         duration = c.end_sec - c.start_sec
-        assert 30 <= duration <= 150
+        assert 14 <= duration <= 105
+
+
+def test_clips_can_be_shorter_than_two_minutes():
+    clips = find_best_clips(_build_sample_transcript())
+    assert any((c.end_sec - c.start_sec) < 90 for c in clips)
 
 
 def test_clips_do_not_heavily_overlap():
