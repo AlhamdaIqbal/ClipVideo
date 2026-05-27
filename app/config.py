@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     whisper_model: str = "small"
-    whisper_device: str = "cpu"
+    whisper_device: str = "auto"  # "auto" will select CUDA if available, otherwise CPU
     whisper_compute_type: str = "int8"
     whisper_beam_size: int = 1
 
