@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     whisper_compute_type: str = "int8"
     whisper_beam_size: int = 1
 
-    clip_count_target: int = 5
+    clip_count_target: int = 3
     clip_min_count: int = 3
     clip_min_seconds: float = 45.0
     clip_max_seconds: float = 120.0
