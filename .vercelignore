@@ -3,3 +3,18 @@ data/
 __pycache__/
 *.pyc
 .git/
+
+# Ignore repo files not needed for the Vercel webhook deployment
+app/
+serverless/
+tools/
+static/
+tests/
+.github/
+requirements.txt
+run.py
+README.md
+package-lock.json
+yarn.lock
+Pipfile*
+setup.py

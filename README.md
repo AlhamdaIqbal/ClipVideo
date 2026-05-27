@@ -95,7 +95,7 @@ Deploy endpoint webhook ke Vercel agar menerima request `{ "url": "...", "chat_i
 
 Langkah deploy Vercel:
 
-1. Pastikan file `api/enqueue.py`, `vercel.json`, dan `requirements.txt` ada di repo.
+1. Pastikan file `api/enqueue.js`, `vercel.json`, dan `package.json` ada di repo.
 2. Pasang Vercel CLI atau gunakan dashboard Vercel.
 3. Di Vercel, atur environment variables:
    - `GITHUB_TOKEN` = GitHub personal access token dengan izin `repo` dan `workflow`
