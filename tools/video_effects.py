@@ -251,9 +251,9 @@ def track_face_and_reframe(
             shutil.copy2(srt_path, local_srt)
             
             style = (
-                "Alignment=2,FontName=Impact,FontSize=20,"
+                "Alignment=2,FontName=Impact,FontSize=13,"
                 "PrimaryColour=&H00FFFF,Outline=3,Shadow=0,"
-                "MarginV=120"
+                "MarginV=60"
             )
             filters.append(f"subtitles={local_srt.name}:force_style='{style}'")
             

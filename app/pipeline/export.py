@@ -117,12 +117,12 @@ def export_clip(
         
         try:
             # Burn subtitle using FFmpeg
-            # Alignment=2 is bottom-center, MarginV=120 raises it up, FontName=Arial Black or Arial is standard, yellow colour
+            # Alignment=2 is bottom-center, MarginV=60 raises it up, FontName=Arial Black or Arial is standard, yellow colour
             # Outline=3, Shadow=0 for super contrast
             style = (
-                "Alignment=2,FontName=Impact,FontSize=20,"
+                "Alignment=2,FontName=Impact,FontSize=13,"
                 "PrimaryColour=&H00FFFF,Outline=3,Shadow=0,"
-                "MarginV=120"
+                "MarginV=60"
             )
             
             cmd_sub = [
