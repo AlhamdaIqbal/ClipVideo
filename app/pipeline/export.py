@@ -34,6 +34,8 @@ def _encode_args() -> list[str]:
         str(settings.export_video_crf),
         "-pix_fmt",
         "yuv420p",
+        "-threads",
+        "0",  # use all available CPU cores
         "-c:a",
         "aac",
         "-b:a",
@@ -96,66 +98,45 @@ def export_clip(
             temp_srt.unlink()
         return output_path
 
-    # Fallback to standard vertical Center Crop if tracking fails or was not requested
+    # Fallback to standard vertical Center Crop (single FFmpeg pass — crop + optional subtitle burn)
     if not reframe_success:
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-ss", str(start_sec),
-            "-i", str(source_video),
-            "-t", str(duration),
-            "-vf", _vertical_video_filter(),
-            *_encode_args(),
-            str(temp_video),
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            if temp_video.exists():
-                temp_video.unlink()
-            raise RuntimeError(f"ffmpeg fallback gagal: {result.stderr[-500:]}")
-
-    # 2. Burn Subtitles if transcript segments are provided
-    if should_burn_subtitles:
-        # Copy to local working directory to solve Windows absolute path escaping bugs in FFmpeg
-        local_srt = Path.cwd() / f"local_sub_{output_path.name}.srt"
-        shutil.copy2(temp_srt, local_srt)
-        
+        local_srt = None
         try:
-            # Burn subtitle using FFmpeg
-            # Alignment=2 is bottom-center, MarginV=60 raises it up, FontName=Arial Black or Arial is standard, yellow colour
-            # Outline=3, Shadow=0 for super contrast
-            style = (
-                "Alignment=2,FontName=Impact,FontSize=13,"
-                "PrimaryColour=&H00FFFF,Outline=3,Shadow=0,"
-                "MarginV=60"
-            )
-            
-            cmd_sub = [
+            if should_burn_subtitles:
+                # Copy SRT to cwd to avoid Windows path escaping issues in FFmpeg
+                local_srt = Path.cwd() / f"local_sub_{output_path.name}.srt"
+                shutil.copy2(temp_srt, local_srt)
+                style = (
+                    "Alignment=2,FontName=Impact,FontSize=13,"
+                    "PrimaryColour=&H00FFFF,Outline=3,Shadow=0,"
+                    "MarginV=60"
+                )
+                # Single pass: crop + subtitle burn together
+                vf = f"{_vertical_video_filter()},subtitles={local_srt.name}:force_style='{style}'"
+                dest = output_path
+            else:
+                vf = _vertical_video_filter()
+                dest = output_path
+
+            cmd = [
                 "ffmpeg",
                 "-y",
-                "-i", str(temp_video),
-                "-vf", f"subtitles={local_srt.name}:force_style='{style}'",
+                "-ss", str(start_sec),
+                "-i", str(source_video),
+                "-t", str(duration),
+                "-vf", vf,
                 *_encode_args(),
-                str(output_path)
+                str(dest),
             ]
-            
-            sub_result = subprocess.run(cmd_sub, capture_output=True, text=True)
-            if sub_result.returncode != 0:
-                raise RuntimeError(f"Gagal membakar subtitle: {sub_result.stderr[-500:]}")
-                
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise RuntimeError(f"ffmpeg fallback gagal: {result.stderr[-500:]}")
         finally:
-            # Absolute clean up of subtitle temp files
             if temp_srt.exists():
                 temp_srt.unlink()
-            if local_srt.exists():
+            if local_srt and local_srt.exists():
                 local_srt.unlink()
-            if temp_video.exists():
-                temp_video.unlink()
-    else:
-        # If no subtitles requested, rename/move the vertical clip directly to the output_path
-        if output_path.exists():
-            output_path.unlink()
-        shutil.move(str(temp_video), str(output_path))
+            # temp_video is not created in this path, nothing to clean up
 
     return output_path
 
