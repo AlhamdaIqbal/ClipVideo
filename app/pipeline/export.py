@@ -13,9 +13,14 @@ logger = logging.getLogger(__name__)
 def _vertical_video_filter() -> str:
     width = settings.export_width
     height = settings.export_height
+    # Scale so the height fills the target (preserving aspect ratio),
+    # then center-crop to the exact target width — no stretching/distortion.
+    # This is the standard approach for converting landscape 16:9 → portrait 9:16
+    # for TikTok / YouTube Shorts.
     return (
-        f"scale={width}:{height}:force_original_aspect_ratio=increase,"
-        f"crop={width}:{height},setsar=1"
+        f"scale=-2:{height},"
+        f"crop={width}:{height}:(iw-{width})/2:0,"
+        f"setsar=1"
     )
 
 
